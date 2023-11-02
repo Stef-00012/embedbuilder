@@ -233,7 +233,6 @@ addEventListener('DOMContentLoaded', () => {
 
     if (autoUpdateURL) {
         document.body.classList.add('autoUpdateURL');
-        document.querySelector('.item.auto > input').checked = true;
     }
 
     if (single) {
@@ -244,12 +243,10 @@ addEventListener('DOMContentLoaded', () => {
 
     if (hideEditor) {
         document.body.classList.add('no-editor');
-        document.querySelector('.toggle .toggles .editor input').checked = false;
     }
 
     if (hidePreview) {
         document.body.classList.add('no-preview');
-        document.querySelector('.toggle .toggles .preview input').checked = false;
     }
 
     if (onlyEmbed) document.body.classList.add('only-embed');
