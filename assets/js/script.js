@@ -10,25 +10,25 @@ mainHost = "glitchii.github.io";
 
 let params = new URLSearchParams(location.search),
     hasParam = param => params.get(param) !== null,
-    dataSpecified = options.data || params.get('data'),
+    dataSpecified = params.get('data') || options.data,
     username = params.get('username') || options.username,
     avatar = params.get('avatar') || options.avatar,
     guiTabs = params.get('guitabs') || options.guiTabs,
-    useJsonEditor = params.get('editor') === 'json' || options.useJsonEditor,
+    useJsonEditor = options.useJsonEditor,
     verified = hasParam('verified') || options.verified,
     reverseColumns = hasParam('reverse') || options.reverseColumns,
     noUser = localStorage.getItem('noUser') || hasParam('nouser') || options.noUser,
     onlyEmbed = hasParam('embed') || options.onlyEmbed,
     allowPlaceholders = hasParam('placeholders') || options.allowPlaceholders,
-    autoUpdateURL = localStorage.getItem('autoUpdateURL') || options.autoUpdateURL,
+    autoUpdateURL = options.autoUpdateURL,
     noMultiEmbedsOption = localStorage.getItem('noMultiEmbedsOption') || hasParam('nomultiembedsoption') || options.noMultiEmbedsOption,
     single = noMultiEmbedsOption ? options.single ?? true : (localStorage.getItem('single') || hasParam('single') || options.single) ?? false,
     multiEmbeds = !single,
-    autoParams = localStorage.getItem('autoParams') || hasParam('autoparams') || options.autoParams,
-    hideEditor = localStorage.getItem('hideeditor') || hasParam('hideeditor') || options.hideEditor,
-    hidePreview = localStorage.getItem('hidepreview') || hasParam('hidepreview') || options.hidePreview,
-    hideMenu = localStorage.getItem('hideMenu') || hasParam('hidemenu') || options.hideMenu,
-    sourceOption = localStorage.getItem('sourceOption') || hasParam('sourceoption') || options.sourceOption,
+    autoParams = options.autoParams,
+    hideEditor = options.hideEditor,
+    hidePreview = options.hidePreview,
+    hideMenu = options.hideMenu,
+    sourceOption = options.sourceOption,
     // sourceInMenu = localStorage.getItem('sourceInMenu') || hasParam('sourceInMenu') || options.sourceInMenu || top.location.host === mainHost,
     validationError, activeFields, lastActiveGuiEmbedIndex = -1, lastGuiJson, colNum = 1, num = 0;
 
@@ -199,62 +199,7 @@ let allJsonKeys = [...mainKeys, ...embedKeys];
 
 // 'jsonObject' is used internally, do not change it's value. Assign to 'json' instead.
 // 'json' is the object that is used to build the embed. Assigning to it also updates the editor.
-let jsonObject = window.json || {
-    content: "You can~~not~~ do `this`.```py\nAnd this.\nprint('Hi')```\n*italics* or _italics_     __*underline italics*__\n**bold**     __**underline bold**__\n***bold italics***  __***underline bold italics***__\n__underline__     ~~Strikethrough~~",
-    embed: {
-        title: "Hello ~~people~~ world :wave:",
-        description: "You can use [links](https://discord.com) or emojis :smile: 😎\n```\nAnd also code blocks\n```",
-        color: 0x41f097,
-        timestamp: new Date().toISOString(),
-        url: "https://discord.com",
-        author: {
-            name: "Author name",
-            url: "https://discord.com",
-            icon_url: "https://cdn.discordapp.com/embed/avatars/0.png"
-        },
-        thumbnail: {
-            url: "https://cdn.discordapp.com/embed/avatars/0.png"
-        },
-        image: {
-            url: "https://glitchii.github.io/embedbuilder/assets/media/banner.png"
-        },
-        footer: {
-            text: "Footer text",
-            icon_url: "https://cdn.discordapp.com/embed/avatars/0.png"
-        },
-        fields: [
-            {
-                name: "Field 1, *lorem* **ipsum**, ~~dolor~~",
-                value: "Field value"
-            },
-            {
-                name: "Field 2",
-                value: "You can use custom emojis <:Kekwlaugh:722088222766923847>. <:GangstaBlob:742256196295065661>",
-                inline: false
-            },
-            {
-                name: "Inline field",
-                value: "Fields can be inline",
-                inline: true
-            },
-            {
-                name: "Inline field",
-                value: "*Lorem ipsum*",
-                inline: true
-            },
-            {
-                name: "Inline field",
-                value: "value",
-                inline: true
-            },
-            {
-                name: "Another field",
-                value: "> Nope, didn't forget about this",
-                inline: false
-            }
-        ]
-    }
-}
+let jsonObject = window.json || {}
 
 if (dataSpecified)
     jsonObject = decodeJson();
