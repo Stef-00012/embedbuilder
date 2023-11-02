@@ -8,8 +8,8 @@
 // URL options can override the options below.
 // Options set through the menu can override both until the page is refreshed.
 options = {
-    username: 'Discord Bot',
-    avatar: 'https://cdn.discordapp.com/embed/avatars/1.png',
+    username: 'GattinhosBot',
+    avatar: 'https://cdn.discordapp.com/avatars/1148559671666429985/d32dd4807b88d03b46eefa7aafbb5e54.png?size=4096',
     verified: false,
     noUser: false,
     data: null,
@@ -17,11 +17,11 @@ options = {
     useJsonEditor: false,
     reverseColumns: false,
     allowPlaceholders: false,
-    autoUpdateURL: false,
-    autoParams: false,
-    hideEditor: false,
+    autoUpdateURL: true,
+    autoParams: true,
+    hideEditor: true,
     hidePreview: false,
-    hideMenu: false,
+    hideMenu: true,
     single: false,
     noMultiEmbedsOption: false,
     sourceOption: false, // Display link to source code in menu.
