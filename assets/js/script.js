@@ -179,7 +179,6 @@ const changeLastActiveGuiEmbed = index => {
 }
 
 // Called after building embed for extra work.
-const afterBuilding = () => autoUpdateURL && urlOptions({ set: ['data', encodeJson(json)] });
 // Parses emojis to images and adds code highlighting.
 const externalParsing = ({ noEmojis, element } = {}) => {
     !noEmojis && twemoji.parse(element || document.querySelector('.msgEmbed'), { base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/' });
@@ -189,8 +188,6 @@ const externalParsing = ({ noEmojis, element } = {}) => {
     const embed = element?.closest('.embed');
     if (embed?.innerText.trim())
         (multiEmbeds ? embed : document.body).classList.remove('emptyEmbed');
-
-    afterBuilding()
 };
 
 let embedKeys = ["author", "footer", "color", "thumbnail", "image", "fields", "title", "description", "url", "timestamp"];
@@ -508,419 +505,6 @@ addEventListener('DOMContentLoaded', () => {
     for (const child of gui.childNodes)
         guiFragment.appendChild(child.cloneNode(true));
 
-    // Renders the GUI editor with json data from 'jsonObject'.
-    buildGui = (object = jsonObject, opts) => {
-        gui.innerHTML = '';
-        gui.appendChild(guiEmbedAddFragment.firstChild.cloneNode(true))
-            .addEventListener('click', () => {
-                if (indexOfEmptyGuiEmbed('(empty embed)') !== -1) return;
-                jsonObject.embeds.push({});
-                buildGui();
-            });
-
-        for (const child of Array.from(guiFragment.childNodes)) {
-            if (child.classList?.[1] === 'content')
-                gui.insertBefore(gui.appendChild(child.cloneNode(true)), gui.appendChild(child.nextElementSibling.cloneNode(true))).nextElementSibling.firstElementChild.value = object.content || '';
-            else if (child.classList?.[1] === 'guiEmbedName') {
-                for (const [i, embed] of (object.embeds.length ? object.embeds : [{}]).entries()) {
-                    const guiEmbedName = gui.appendChild(child.cloneNode(true))
-
-                    guiEmbedName.querySelector('.text').innerHTML = `Embed ${i + 1}${embed.title ? `: <span>${embed.title}</span>` : ''}`;
-                    guiEmbedName.querySelector('.icon').addEventListener('click', () => {
-                        object.embeds.splice(i, 1);
-                        buildGui();
-                        buildEmbed();
-                    });
-
-                    const guiEmbed = gui.appendChild(createElement({ 'div': { className: 'guiEmbed' } }));
-                    const guiEmbedTemplate = child.nextElementSibling;
-
-                    for (const child2 of Array.from(guiEmbedTemplate.children)) {
-                        if (!child2?.classList.contains('edit')) {
-                            const row = guiEmbed.appendChild(child2.cloneNode(true));
-                            const edit = child2.nextElementSibling?.cloneNode(true);
-                            edit?.classList.contains('edit') && guiEmbed.appendChild(edit);
-
-                            switch (child2.classList[1]) {
-                                case 'author':
-                                    const authorURL = embed?.author?.icon_url || '';
-                                    if (authorURL)
-                                        edit.querySelector('.imgParent').style.content = 'url(' + encodeHTML(authorURL) + ')';
-                                    edit.querySelector('.editAuthorLink').value = authorURL;
-                                    edit.querySelector('.editAuthorName').value = embed?.author?.name || '';
-                                    break;
-                                case 'title':
-                                    row.querySelector('.editTitle').value = embed?.title || '';
-                                    break;
-                                case 'description':
-                                    edit.querySelector('.editDescription').value = embed?.description || '';
-                                    break;
-                                case 'thumbnail':
-                                    const thumbnailURL = embed?.thumbnail?.url || '';
-                                    if (thumbnailURL)
-                                        edit.querySelector('.imgParent').style.content = 'url(' + encodeHTML(thumbnailURL) + ')';
-                                    edit.querySelector('.editThumbnailLink').value = thumbnailURL;
-                                    break;
-                                case 'image':
-                                    const imageURL = embed?.image?.url || '';
-                                    if (imageURL)
-                                        edit.querySelector('.imgParent').style.content = 'url(' + encodeHTML(imageURL) + ')';
-                                    edit.querySelector('.editImageLink').value = imageURL;
-                                    break;
-                                case 'footer':
-                                    const footerURL = embed?.footer?.icon_url || '';
-                                    if (footerURL)
-                                        edit.querySelector('.imgParent').style.content = 'url(' + encodeHTML(footerURL) + ')';
-                                    edit.querySelector('.editFooterLink').value = footerURL;
-                                    edit.querySelector('.editFooterText').value = embed?.footer?.text || '';
-                                    break;
-                                case 'fields':
-                                    for (const f of embed?.fields || []) {
-                                        const fields = edit.querySelector('.fields');
-                                        const field = fields.appendChild(createElement({ 'div': { className: 'field' } }));
-
-                                        for (const child of Array.from(fieldFragment.firstChild.children)) {
-                                            const newChild = field.appendChild(child.cloneNode(true));
-
-                                            if (child.classList.contains('inlineCheck'))
-                                                newChild.querySelector('input').checked = !!f.inline;
-
-                                            else if (f.value && child.classList?.contains('fieldInner'))
-                                                newChild.querySelector('.designerFieldName input').value = f.name || '',
-                                                    newChild.querySelector('.designerFieldValue textarea').value = f.value || '';
-                                        }
-                                    }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Expand last embed in GUI
-            const names = gui.querySelectorAll('.guiEmbedName');
-            names[names.length - 1]?.classList.add('active');
-        }
-
-        for (const e of document.querySelectorAll('.top>.gui .item'))
-            e.addEventListener('click', el => {
-                if (e?.classList.contains('active'))
-                    getSelection().anchorNode !== e && e.classList.remove('active');
-                else if (e) {
-                    const inlineField = e.closest('.inlineField'),
-                        input = e.nextElementSibling?.querySelector('input[type="text"]'),
-                        txt = e.nextElementSibling?.querySelector('textarea');
-
-                    e.classList.add('active');
-                    if (e.classList.contains('guiEmbedName'))
-                        return changeLastActiveGuiEmbed(guiEmbedIndex(e));
-
-                    else if (inlineField)
-                        inlineField.querySelector('.ttle~input').focus();
-
-                    else if (e.classList.contains('footer')) {
-                        const date = new Date(jsonObject.embeds[guiEmbedIndex(e)]?.timestamp || new Date());
-                        const textElement = e.nextElementSibling.querySelector('svg>text');
-                        const dateInput = textElement.closest('.footerDate').querySelector('input');
-
-                        return (
-                            textElement.textContent = (date.getDate() + '').padStart(2, 0),
-                            dateInput.value = date.toISOString().substring(0, 19)
-                        );
-                    }
-
-                    else if (input) {
-                        !smallerScreen.matches && input.focus();
-                        input.selectionStart = input.selectionEnd = input.value.length;
-                    }
-
-                    else if (txt && !smallerScreen.matches)
-                        txt.focus();
-
-                    if (e.classList.contains('fields')) {
-                        if (reverseColumns && smallerScreen.matches)
-                            // return elm.nextElementSibling.scrollIntoView({ behavior: 'smooth', block: "end" });
-                            return e.parentNode.scrollTop = e.offsetTop;
-
-                        e.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }
-                }
-            })
-
-        content = gui.querySelector('.editContent');
-        title = gui.querySelector('.editTitle');
-        authorName = gui.querySelector('.editAuthorName');
-        authorLink = gui.querySelector('.editAuthorLink');
-        desc = gui.querySelector('.editDescription');
-        thumbLink = gui.querySelector('.editThumbnailLink');
-        imgLink = gui.querySelector('.editImageLink');
-        footerText = gui.querySelector('.editFooterText');
-        footerLink = gui.querySelector('.editFooterLink');
-
-        // Scroll into view when tabs are opened in the GUI.
-        const lastTabs = Array.from(document.querySelectorAll('.footer.rows2, .image.largeImg'));
-        const requiresView = matchMedia(`${smallerScreen.media}, (max-height: 845px)`);
-        const addGuiEventListeners = () => {
-            for (const e of document.querySelectorAll('.gui .item:not(.fields)'))
-                e.onclick = () => {
-                    if (lastTabs.includes(e) || requiresView.matches) {
-                        if (!reverseColumns || !smallerScreen.matches)
-                            e.scrollIntoView({ behavior: 'smooth', block: "center" });
-                        else if (e.nextElementSibling.classList.contains('edit') && e.classList.contains('active'))
-                            // e.nextElementSibling.scrollIntoView({ behavior: 'smooth', block: "end" });
-                            e.parentNode.scrollTop = e.offsetTop;
-                    }
-                };
-
-            for (const e of document.querySelectorAll('.addField'))
-                e.onclick = () => {
-                    const guiEmbed = e.closest('.guiEmbed');
-                    const indexOfGuiEmbed = Array.from(gui.querySelectorAll('.guiEmbed')).indexOf(guiEmbed);
-                    if (indexOfGuiEmbed === -1) return error('Could not find the embed to add the field to.');
-
-                    const fieldsObj = (jsonObject.embeds[indexOfGuiEmbed] ??= {}).fields ??= [];
-                    if (fieldsObj.length >= 25) return error('Cannot have more than 25 fields');
-                    fieldsObj.push({ name: "Field name", value: "Field value", inline: false });
-
-                    const newField = guiEmbed?.querySelector('.item.fields+.edit>.fields')?.appendChild(fieldFragment.firstChild.cloneNode(true));
-
-                    buildEmbed();
-                    addGuiEventListeners();
-
-                    newField.scrollIntoView({ behavior: "smooth", block: "center" });
-                    if (!smallerScreen.matches) {
-                        const firstFieldInput = newField.querySelector('.designerFieldName input');
-
-                        firstFieldInput?.setSelectionRange(firstFieldInput.value.length, firstFieldInput.value.length);
-                        firstFieldInput?.focus();
-                    }
-                };
-
-            for (const e of document.querySelectorAll('.fields .field .removeBtn'))
-                e.onclick = () => {
-                    const embedIndex = guiEmbedIndex(e);
-                    const fieldIndex = Array.from(e.closest('.fields').children).indexOf(e.closest('.field'));
-
-                    if (jsonObject.embeds[embedIndex]?.fields[fieldIndex] === -1)
-                        return error('Failed to find the index of the field to remove.');
-
-                    jsonObject.embeds[embedIndex].fields.splice(fieldIndex, 1);
-
-                    buildEmbed();
-                    e.closest('.field').remove();
-                };
-
-            for (const e of gui.querySelectorAll('textarea, input'))
-                e.oninput = el => {
-                    const value = el.target.value;
-                    const index = guiEmbedIndex(el.target);
-                    const field = el.target.closest('.field');
-                    const fields = field?.closest('.fields');
-                    const embedObj = jsonObject.embeds[index] ??= {};
-
-                    if (field) {
-                        console.log(field)
-                        const fieldIndex = Array.from(fields.children).indexOf(field);
-                        const jsonField = embedObj.fields[fieldIndex];
-                        const embedFields = document.querySelectorAll('.container>.embed')[index]?.querySelector('.embedFields');
-
-                        if (jsonField) {
-                            if (el.target.type === 'text') jsonField.name = value;
-                            else if (el.target.type === 'textarea') jsonField.value = value;
-                            else jsonField.inline = el.target.checked;
-                            createEmbedFields(embedObj.fields, embedFields);
-                        }
-                    } else {
-                        switch (el.target.classList?.[0]) {
-                            case 'editContent':
-                                jsonObject.content = value;
-                                buildEmbed({ only: 'content' });
-                                break;
-                            case 'editTitle':
-                                embedObj.title = value;
-                                const guiEmbedName = el.target.closest('.guiEmbed')?.previousElementSibling;
-                                if (guiEmbedName?.classList.contains('guiEmbedName'))
-                                    guiEmbedName.querySelector('.text').innerHTML = `${guiEmbedName.innerText.split(':')[0]}${value ? `: <span>${value}</span>` : ''}`;
-                                buildEmbed({ only: 'embedTitle', index: guiEmbedIndex(el.target) });
-                                break;
-                            case 'editAuthorName':
-                                embedObj.author ??= {}, embedObj.author.name = value;
-                                buildEmbed({ only: 'embedAuthorName', index: guiEmbedIndex(el.target) });
-                                break;
-                            case 'editAuthorLink': embedObj.author ??= {}, embedObj.author.icon_url = value;
-                                imgSrc(el.target.previousElementSibling, value);
-                                buildEmbed({ only: 'embedAuthorLink', index: guiEmbedIndex(el.target) });
-                                break;
-                            case 'editDescription': embedObj.description = value;
-                                buildEmbed({ only: 'embedDescription', index: guiEmbedIndex(el.target) });
-                                break;
-                            case 'editThumbnailLink':
-                                embedObj.thumbnail ??= {}, embedObj.thumbnail.url = value;
-                                imgSrc(el.target.closest('.editIcon').querySelector('.imgParent'), value);
-                                buildEmbed({ only: 'embedThumbnail', index: guiEmbedIndex(el.target) });
-                                break;
-                            case 'editImageLink':
-                                embedObj.image ??= {}, embedObj.image.url = value;
-                                imgSrc(el.target.closest('.editIcon').querySelector('.imgParent'), value);
-                                buildEmbed({ only: 'embedImageLink', index: guiEmbedIndex(el.target) });
-                                break;
-                            case 'editFooterText':
-                                embedObj.footer ??= {}, embedObj.footer.text = value;
-                                buildEmbed({ only: 'embedFooterText', index: guiEmbedIndex(el.target) });
-                                break;
-                            case 'editFooterLink':
-                                embedObj.footer ??= {}, embedObj.footer.icon_url = value;
-                                imgSrc(el.target.previousElementSibling, value);
-                                buildEmbed({ only: 'embedFooterLink', index: guiEmbedIndex(el.target) });
-                                break;
-                            case 'embedFooterTimestamp':
-                                const date = new Date(value);
-                                if (isNaN(date.getTime())) return error('Invalid date');
-
-                                embedObj.timestamp = date;
-                                el.target.parentElement.querySelector('svg>text').textContent = (date.getDate() + '').padStart(2, 0);
-                                buildEmbed({ only: 'embedFooterTimestamp', index: guiEmbedIndex(el.target) });
-                                break;
-                        }
-
-                        // Find and filter out any empty objects ({}) in the embeds array as Discord doesn't like them.
-                        const nonEmptyEmbedObjects = json.embeds?.filter(o => 0 in Object.keys(o));
-                        if (nonEmptyEmbedObjects?.length)
-                            json.embeds = nonEmptyEmbedObjects;
-                    }
-
-                    // Display embed elements hidden due to not having content. '.msgEmbed>.container' is embed container.
-                    document.querySelectorAll('.msgEmbed>.container')[guiEmbedIndex(el.target)]?.querySelector('.emptyEmbed')?.classList.remove('emptyEmbed');
-                }
-
-            const uploadError = (message, browse, sleepTime) => {
-                browse.classList.remove('loading');
-                browse.classList.add('error');
-
-                const p = browse.parentElement.querySelector('.browse.error>p')
-                p.dataset.error = message;
-
-                setTimeout(() => {
-                    browse.classList.remove('error');
-                    delete p.dataset.error;
-                }, sleepTime ?? 7000);
-            }
-
-            for (const browse of document.querySelectorAll('.browse'))
-                browse.onclick = e => {
-                    const formData = new FormData();
-                    const fileInput = createElement({ 'input': { type: 'file', accept: 'image/*' } });
-                    const edit = browse.closest('.edit');
-                    const expiration = 7 * 24 * 60 * 60;
-
-                    fileInput.onchange = el => {
-                        if (el.target.files[0].size > 32 * 1024 * 1024)
-                            return uploadError('File is too large. Maximum size is 32 MB.', browse, 5000);
-
-                        formData.append("expiration", expiration); // Expire after 7 days. Discord caches files.
-                        formData.append("key", options.uploadKey || "93385e22b0619db73a5525140b13491c"); // Add your own key through the uploadKey option.
-                        formData.append("image", el.target.files[0]);
-                        // formData.append("name", ""); // Uses original file name if no "name" is not specified.
-
-                        browse.classList.add('loading');
-
-                        fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: formData })
-                            .then(res => res.json())
-                            .then(res => {
-                                browse.classList.remove('loading');
-                                if (!res.success) {
-                                    console.log('Upload failed:', res.data?.error || res.error?.message || res);
-                                    return uploadError(res.data?.error || res.error?.message || "Request failed. (Check dev-console)", browse);
-                                }
-
-                                imgSrc(edit.querySelector('.editIcon > .imgParent'), res.data.url);
-                                const linkInput = edit.querySelector('input[type=text]');
-                                const textInput = edit.querySelector('input[class$=Name], input[class$=Text]');
-
-                                linkInput.value = res.data.url;
-                                // focus on the next empty input if the field requires a name or text to display eg. footer or author.
-                                !textInput?.value && textInput?.focus();
-
-                                console.info(`${res.data.url} will be deleted in ${expiration / 60 / 60} hours. To delete it now, visit ${res.data.delete_url} and scroll down to find the delete button.`);
-
-                                linkInput.dispatchEvent(new Event('input'));
-                            }).catch(err => {
-                                browse.classList.remove('loading');
-                                error(`Request failed with error: ${err}`)
-                            })
-                    }
-
-                    fileInput.click();
-                }
-
-            if (multiEmbeds) {
-                for (const e of document.querySelectorAll('.guiEmbed'))
-                    e.onclick = () => {
-                        const guiEmbed = e.closest('.guiEmbed');
-                        const indexOfGuiEmbed = Array.from(gui.querySelectorAll('.guiEmbed')).indexOf(guiEmbed);
-                        if (indexOfGuiEmbed === -1) return error('Could not find the embed to add the field to.');
-
-                        changeLastActiveGuiEmbed(indexOfGuiEmbed);
-                    };
-
-
-                if (!jsonObject.embeds[lastActiveGuiEmbedIndex])
-                    changeLastActiveGuiEmbed(
-                        jsonObject.embeds[lastActiveGuiEmbedIndex - 1] ?
-                            lastActiveGuiEmbedIndex - 1 :
-                            jsonObject.embeds.length ? 0 : -1
-                    );
-            } else {
-                changeLastActiveGuiEmbed(-1);
-            }
-        }
-
-        addGuiEventListeners();
-
-        let activeGuiEmbed;
-
-        if (opts?.guiEmbedIndex) {
-            activeGuiEmbed = Array.from(document.querySelectorAll('.gui .item.guiEmbedName'))[opts.guiEmbedIndex];
-            activeGuiEmbed?.classList.add('active');
-            activeGuiEmbed = activeGuiEmbed?.nextElementSibling;
-        }
-
-
-        if (opts?.activateClassNames)
-            for (const cName of opts.activateClassNames)
-                for (const e of document.getElementsByClassName(cName))
-                    e.classList.add('active');
-
-        else if (opts?.guiTabs) {
-            const tabs = (opts.guiTabs.split?.(/, */) || opts.guiTabs).filter(item => item);
-            const bottomKeys = ['footer', 'image'];
-            const topKeys = ['author', 'content'];
-
-            // Deactivate the default activated GUI fields
-            for (const e of gui.querySelectorAll('.item:not(.guiEmbedName).active'))
-                e.classList.remove('active');
-
-            // Activate wanted GUI fields
-            if (tabs.length)
-                for (const e of document.querySelectorAll(`.${tabs.join(', .')}`))
-                    e.classList.add('active');
-
-            // Autoscroll GUI to the bottom if necessary.
-            if (!tabs.some(item => topKeys.includes(item)) && tabs.some(item => bottomKeys.includes(item))) {
-                const gui2 = document.querySelector('.top .gui');
-                gui2.scrollTo({ top: gui2.scrollHeight });
-            }
-        }
-
-        else if (opts?.activate)
-            for (const clss of Array.from(opts.activate).map(el => el.className).map(clss => '.' + clss.split(' ').slice(0, 2).join('.')))
-                for (const e of document.querySelectorAll(clss))
-                    e.classList.add('active');
-
-        else for (const clss of document.querySelectorAll('.item.author, .item.description'))
-            clss.classList.add('active');
-    }
-
-    buildGui(jsonObject, { guiTabs });
     gui.classList.remove('hidden');
 
     fields = gui.querySelector('.fields ~ .edit .fields');
@@ -984,7 +568,6 @@ addEventListener('DOMContentLoaded', () => {
                         pre?.style.removeProperty('max-width');
                     }
 
-                    return afterBuilding();
                 case 'embedImage':
                     const embedImageLink = embed?.querySelector('.embedImageLink');
                     if (!embedImageLink) return buildEmbed();
@@ -992,7 +575,6 @@ addEventListener('DOMContentLoaded', () => {
                     else embedImageLink.src = embedObj.image.url,
                         embedImageLink.parentElement.style.display = 'block';
 
-                    return afterBuilding();
                 case 'embedFooterText':
                 case 'embedFooterLink':
                 case 'embedFooterTimestamp':
@@ -1077,8 +659,6 @@ addEventListener('DOMContentLoaded', () => {
             // Make sure that the embed has no text or any visible images such as custom emojis before hiding.
             if (!multiEmbeds && !embedCont.innerText.trim() && !embedCont.querySelector('.embedGrid > [style*=display] img'))
                 document.body.classList.add('emptyEmbed');
-
-            afterBuilding()
         } catch (e) {
             console.error(e);
             error(e);
@@ -1304,7 +884,6 @@ addEventListener('DOMContentLoaded', () => {
                 jsonObject.embeds = [jsonObject.embeds?.[0] || {}];
             }
 
-            buildGui();
             buildEmbed();
             editor.setValue(JSON.stringify(json, null, 4));
         }
@@ -1326,8 +905,6 @@ addEventListener('DOMContentLoaded', () => {
         document.querySelector('.side1').classList.toggle('low');
         if (pickLater) pickInGuiMode = true;
     };
-
-    document.querySelector('.pickerToggle').addEventListener('click', () => togglePicker());
     buildEmbed();
 
     document.body.addEventListener('click', e => {
@@ -1352,40 +929,6 @@ addEventListener('DOMContentLoaded', () => {
 
         buildEmbed();
     })
-
-    if (onlyEmbed) document.querySelector('.side1')?.remove();
-
-    const menuMore = document.querySelector('.item.section .inner.more');
-    const menuSource = menuMore?.querySelector('.source');
-
-    if (!sourceOption) menuSource.remove();
-    if (menuMore.childElementCount < 2) menuMore?.classList.add('invisible');
-    if (menuMore.parentElement.childElementCount < 1) menuMore?.parentElement.classList.add('invisible');
-
-    document.querySelector('.top-btn.copy').addEventListener('click', e => {
-        const mark = e.target.closest('.top-btn.copy').querySelector('.mark'),
-            jsonData = JSON.stringify(json, null, 4),
-            next = () => {
-                mark?.classList.remove('hidden');
-                mark?.previousElementSibling?.classList.add('hidden');
-
-                setTimeout(() => {
-                    mark?.classList.add('hidden');
-                    mark?.previousElementSibling?.classList.remove('hidden');
-                }, 1500);
-            }
-
-        if (!navigator.clipboard?.writeText(jsonData).then(next).catch(err => console.log('Could not copy to clipboard: ' + err.message))) {
-            const textarea = document.body.appendChild(document.createElement('textarea'));
-
-            textarea.value = jsonData;
-            textarea.select();
-            textarea.setSelectionRange(0, 50000);
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            next();
-        }
-    });
 });
 
 // Don't assign to 'jsonObject', assign to 'json' instead.
@@ -1424,7 +967,6 @@ Object.defineProperty(window, 'json', {
         };
 
         buildEmbed();
-        buildGui();
     },
 });
 
