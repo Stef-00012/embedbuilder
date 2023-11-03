@@ -24,7 +24,7 @@ options = {
     hideMenu: true,
     single: false,
     noMultiEmbedsOption: false,
-    sourceOption: false, // Display link to source code in menu.
+    sourceOption: true, // Display link to source code in menu.
 }
 
 // Default JSON object
